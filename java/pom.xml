@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>pulse</groupId>
+  <artifactId>pulse-parent</artifactId>
+  <version>1.0</version>
+  <packaging>pom</packaging>
+
+  <modules>
+    <module>hadoop-jobs</module>
+    <module>storm-topology</module>
+  </modules>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <hadoop.version>3.3.6</hadoop.version>
+    <junit.version>5.10.2</junit.version>
+  </properties>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin><artifactId>maven-surefire-plugin</artifactId><version>3.2.5</version></plugin>
+        <plugin><artifactId>maven-shade-plugin</artifactId><version>3.5.3</version></plugin>
+        <plugin><artifactId>maven-compiler-plugin</artifactId><version>3.13.0</version></plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
+</project>

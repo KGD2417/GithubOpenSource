@@ -1,0 +1,5 @@
+renovate-bot
+k8s-ci-robot
+pre-commit-ci
+mergify
+netlify

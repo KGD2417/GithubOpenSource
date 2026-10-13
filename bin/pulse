@@ -1,0 +1,172 @@
+#!/usr/bin/env bash
+# pulse: the single entry point for every pipeline step (used by make, Airflow and the viva).
+# Runs inside the edge container:  docker compose exec edge pulse <command> [args]
+set -euo pipefail
+cd /opt/pulse
+# Spark picks driver/executor pythons from spark-defaults.conf (spark.pyspark.*); env vars would override it
+unset PYSPARK_PYTHON PYSPARK_DRIVER_PYTHON
+
+BEELINE_URL="jdbc:hive2://hiveserver2:10000"
+beeline_q() { beeline -u "$BEELINE_URL" -n root --silent=true --showHeader=false --outputformat=tsv2 "$@" 2>/dev/null; }
+
+# Everything lives in main(), which bash parses completely before running: editing this file while a
+# long step (Pig, Spark, ...) is running can't corrupt the running copy.
+main() {
+cmd=${1:-help}; shift || true
+case "$cmd" in
+  download)            # pulse download --mode sample|demo|large
+    scripts/download_gharchive.sh "$@" ;;
+
+  hql)                 # pulse hql <file.sql> [--hivevar k=v ...]
+    f=$1; shift
+    beeline -u "$BEELINE_URL" -n root --silent=true -f "$f" "$@" 2>&1 | { grep -vE '^SLF4J|^\s*$' || true; } ;;
+
+  ddl)                 # create/refresh every Hive table definition, in order
+    for f in hive/ddl/*.sql; do echo "== $f"; pulse hql "$f"; done ;;
+
+  catalogue-init)      # create catalogue tables + lookup rows in Postgres
+    python3 - <<'PY'
+import os, psycopg2
+db = psycopg2.connect(host="postgres", dbname="catalogue", user="catalogue", password=os.environ["CATALOGUE_DB_PASSWORD"])
+db.autocommit = True
+db.cursor().execute(open("sql/catalogue.sql").read())
+print("catalogue schema ready")
+PY
+    ;;
+
+  seed-catalogue)      # pulse seed-catalogue [N]: top-N repos by distinct human actors -> GitHub API -> Postgres
+    # Ranked by distinct non-bot actors, not raw event count: raw counts are dominated by
+    # automated push-spam repos (most of which are deleted by the time we call the API).
+    n=${1:-500}
+    src=gh.events_raw; repo="repo.id, repo.name"; login="actor.login"
+    tables=$(beeline_q -e "SHOW TABLES IN gh LIKE 'events_clean'" || true)   # capture: avoids grep -q + pipefail
+    if grep -q events_clean <<<"$tables"; then
+      src=gh.events_clean; repo="repo_id, repo_name"; login="actor_login"
+    fi
+    mkdir -p data
+    echo "top $n repos from $src"
+    beeline_q -e "SELECT ${repo%%,*}, max(${repo##*, }) FROM $src WHERE $login NOT LIKE '%[bot]'
+                  GROUP BY ${repo%%,*} ORDER BY count(DISTINCT $login) DESC LIMIT $n" > data/top_repos.tsv
+    beeline_q -e "SELECT $login FROM $src WHERE $login LIKE '%[bot]' GROUP BY $login ORDER BY count(*) DESC LIMIT 300" > data/bot_logins.txt
+    python3 scripts/seed_catalogue.py --repos data/top_repos.tsv --bots data/bot_logins.txt ;;
+
+  pig-etl)             # pulse pig-etl <dt>: raw JSON -> gh.events_clean partitions for that day
+    dt=$1
+    beeline_q -e "ALTER TABLE gh.events_clean DROP IF EXISTS PARTITION (dt='$dt') PURGE" >/dev/null
+    # Also remove the directory: an interrupted run can leave data with no metastore partition, and
+    # HCatStorer refuses to publish over it ("duplicate publish not possible").
+    hdfs dfs -rm -r -f -skipTrash "/gh/clean/events/dt=$dt" "/gh/dq/stage_counts/stage=clean/$dt" >/dev/null
+    pig -useHCatalog -param dt="$dt" pig/etl_events.pig 2>&1 | grep -E "ERROR|Success!|Failed!|Input\(s\)|Output\(s\)|records" || true
+    hdfs dfs -test -e "/gh/dq/stage_counts/stage=clean/$dt/_SUCCESS" || { echo "pig-etl failed for $dt" >&2; exit 1; }
+    hdfs dfs -cat "/gh/dq/stage_counts/stage=clean/$dt/part*" ;;
+
+  mr-top)              # pulse mr-top <dt> [N]: MapReduce daily top-N repos per event type (humans only)
+    dt=$1; n=${2:-25}; out=/gh/curated/mr/top_repos/dt=$dt
+    hdfs dfs -rm -r -f -skipTrash "$out" >/dev/null
+    hadoop jar java/hadoop-jobs/target/pulse-hadoop.jar pulse.mr.TopReposByTypeDay \
+      -D pulse.topN="$n" -D pulse.excludeBots=true "/gh/clean/events/dt=$dt" "$out.tmp"
+    # MR output has dt as the first column; the Hive table keeps dt as a partition instead
+    hdfs dfs -cat "$out.tmp/part-*" | cut -f2- | hdfs dfs -put -f - "$out/top.tsv"
+    hdfs dfs -rm -r -skipTrash "$out.tmp" >/dev/null
+    beeline_q -e "MSCK REPAIR TABLE gh.top_repos_mr" >/dev/null ;;
+
+  hive-curated)        # pulse hive-curated <dt>: daily curated partitions (needs pig-etl, mr-top, catalogue)
+    pulse hql hive/curated/daily.sql --hivevar dt="$1" ;;
+
+  hive-window)         # rebuild window tables (trending_window, repo_health) over all loaded days
+    pulse hql hive/curated/window.sql ;;
+
+  spark-sql-file)      # pulse spark-sql-file <file.sql>: run DDL/SQL through Spark (no HiveServer2 needed)
+    spark-sql --master local[1] -f "$1" 2>&1 | { grep -vE "WARN|INFO|^\s*$" || true; } ;;
+
+  spark-features)      # pulse spark-features [--feature-hours 24 --label-hours 120]
+    spark-submit spark/features.py "$@" 2>&1 | { grep -vE " (WARN|INFO) " || true; } ;;
+
+  spark-viral)         # pulse spark-viral [--threshold N]
+    spark-submit spark/viral_model.py "$@" 2>&1 | { grep -vE " (WARN|INFO) " || true; } ;;
+
+  recs-prep)           # pulse recs-prep [--min-user-stars 3 --min-repo-stars 5]: star matrix + holdout for Mahout
+    spark-submit spark/recs_prep.py "$@" 2>&1 | { grep -vE " (WARN|INFO) " || true; } ;;
+
+  mahout-itemcf)       # Mahout item-based CF (itemsimilarity + recommenditembased) on YARN
+    mahout/itemcf.sh 2>&1 | { grep -E "Running job|Job job_.* completed|similar pairs|ERROR|Exception" || true; } ;;
+
+  mahout-kmeans)       # pulse mahout-kmeans [k]: bonus repo clustering (Spark prep -> Mahout k-means -> Hive)
+    spark-submit spark/kmeans_io.py prep 2>&1 | { grep -E "kmeans vectors|Error" || true; }
+    mahout/kmeans.sh "${1:-6}" 2>&1 | { grep -E "written|Job job_.* completed|ERROR|Exception" || true; }
+    spark-submit spark/kmeans_io.py load 2>&1 | { grep -E "^cluster |Error" || true; } ;;
+
+  recs-eval)           # load Mahout output into Hive, train Spark ALS, compare both against the holdout
+    spark-submit spark/eval_recs.py "$@" 2>&1 | { grep -vE " (WARN|INFO) " || true; } ;;
+
+  hbase-prep)          # shape serving data into salted HBase row keys (Spark, ml stage)
+    spark-submit spark/hbase_prep.py "$@" 2>&1 | { grep -E "rows$|Error" || true; } ;;
+
+  hbase-init)          # create HBase tables (serving stage)
+    hbase shell -n hbase/create_tables.rb 2>&1 | { grep -E "Created table|ERROR" || true; } ;;
+
+  hbase-load)          # ImportTsv -> HFiles -> bulk load (serving stage)
+    hbase/load.sh ;;
+
+  kafka-topics)        # create the Kafka topics (streaming stage)
+    docker_kafka() { python3 - "$@" <<'PY'
+import sys
+from confluent_kafka.admin import AdminClient, NewTopic
+a = AdminClient({"bootstrap.servers": "kafka:9092"})
+# gh.events = replayed GH Archive, gh.events.live = GitHub API poller. Separate on purpose: the topology
+# windows on event time, so one 2026 live event in a 2025 replay would push the watermark past every
+# replayed event and Storm would drop them all as late.
+want = [NewTopic("gh.events", 6, 1, config={"retention.ms": str(12 * 3600 * 1000)}),
+        NewTopic("gh.events.live", 3, 1, config={"retention.ms": str(12 * 3600 * 1000)}),
+        NewTopic("gh.alerts", 1, 1, config={"retention.ms": str(24 * 3600 * 1000)})]
+existing = a.list_topics(timeout=20).topics
+missing = [t for t in want if t.topic not in existing]
+for t, f in (a.create_topics(missing).items() if missing else []):
+    f.result(); print("created", t)
+print("topics:", sorted(k for k in a.list_topics(timeout=20).topics if not k.startswith("_")))
+PY
+    }; docker_kafka ;;
+
+  replay)              # pulse replay --date 2025-09-01 --hours 12-14 --speed 60 [--loop]
+    python3 -u streaming/replay_producer.py "$@" ;;
+
+  bench)               # pulse bench <sample|demo|large> [reps] [engines]: engine benchmark -> timings.csv
+    bench/run_bench.sh "$@" ;;
+
+  bench-chart)         # charts from bench/results/*.csv -> bench/charts/*.png
+    python3 bench/plot.py ;;
+
+  dq-export)           # record counts per stage over all loaded days -> bench/results/dq_funnel.csv
+    beeline_q -e "MSCK REPAIR TABLE gh.dq_stage_counts" >/dev/null
+    # leading sort key: UNION ALL has no order of its own
+    { echo "stage,records"
+      beeline_q -e "SELECT k, label, n FROM (
+          SELECT 1 k, 'raw lines downloaded' label, sum(records) n FROM gh.dq_stage_counts WHERE stage='raw' AND status='ok'
+          UNION ALL SELECT 2, 'parsed by the Pig UDF', sum(records) FROM gh.dq_stage_counts WHERE stage_name='parsed_ok'
+          UNION ALL SELECT 3, 'clean (deduplicated)', count(*) FROM gh.events_clean
+          UNION ALL SELECT 4, 'clean - human events', sum(if(is_bot,0,1)) FROM gh.events_clean
+          UNION ALL SELECT 5, 'curated repo-days', count(*) FROM gh.repo_daily_activity
+          UNION ALL SELECT 6, 'curated human stars', count(*) FROM gh.stars) t ORDER BY k" | cut -f2- | tr '\t' ','
+    } > bench/results/dq_funnel.csv; cat bench/results/dq_funnel.csv ;;
+
+  export-extracts)     # dashboard tables -> tableau/extracts/*.csv (Tableau fallback without ODBC)
+    tableau/export_extracts.sh batch ;;
+
+  export-live)         # Storm/HBase live counters -> tableau/extracts/live_*.csv
+    tableau/export_extracts.sh live ;;
+
+  dq)                  # pulse dq <clean|curated> <dt>: data-quality assertions, non-zero exit on failure
+    beeline_q -e "MSCK REPAIR TABLE gh.dq_stage_counts" >/dev/null
+    beeline -u "$BEELINE_URL" -n root --silent=true --outputformat=vertical -f "dq/check_$1.sql" --hivevar dt="$2" 2>&1 \
+      | { grep -vE '^SLF4J|^\s*$' || true; } ;;
+
+  sqoop-import-lookups) sqoop/import_lookups.sh ;;
+  sqoop-import-repos)   sqoop/import_repos_incr.sh ;;
+  sqoop-export)         sqoop/export_results.sh ;;
+
+  help|*)
+    sed -n 's/^  \([a-z-]*\)) *#\(.*\)/  \1 \2/p; s/^  \([a-z-]*\)) .*/  \1/p' "$0" | sort -u ;;
+esac
+}
+
+main "$@"

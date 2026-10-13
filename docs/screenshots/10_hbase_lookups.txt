@@ -1,0 +1,45 @@
+$ scripts/hlookup.sh similar JetBrains/koog
+ m:name value=JetBrains/koog
+ s:01 value=23462770|0xAX/asm|0.9097
+ s:02 value=40136600|ktorio/ktor|0.9097
+ s:03 value=81598961|python/cpython|0.9097
+ s:04 value=550755640|zama-ai/tfhe-rs|0.9097
+ s:05 value=3432266|JetBrains/kotlin|0.8797
+ s:06 value=63539055|jaywcjlove/awesome-mac|0.8797
+ s:07 value=998732712|yichuan-w/LEANN|0.8797
+
+$ scripts/hlookup.sh hourly dockur/windows 20250907
+ 8c|000743140652|2025090710 column=c:bot, value=0
+ 8c|000743140652|2025090710 column=c:pr, value=0
+ 8c|000743140652|2025090710 column=c:push, value=0
+ 8c|000743140652|2025090710 column=c:total, value=4
+ 8c|000743140652|2025090710 column=c:watch, value=3
+ 8c|000743140652|2025090711 column=c:bot, value=0
+ 8c|000743140652|2025090711 column=c:pr, value=0
+ 8c|000743140652|2025090711 column=c:push, value=0
+ 8c|000743140652|2025090711 column=c:total, value=5
+ 8c|000743140652|2025090711 column=c:watch, value=4
+ 8c|000743140652|2025090712 column=c:bot, value=0
+ 8c|000743140652|2025090712 column=c:pr, value=0
+
+$ scripts/hlookup.sh recs chaoyue729
+ r:01 value=Sumanth077/ai-engineering-toolkit|1.807
+ r:02 value=karpathy/nn-zero-to-hero|1.804
+ r:03 value=mlabonne/llm-course|1.782
+ r:04 value=coleam00/ottomator-agents|1.775
+ r:05 value=mickael-kerjean/filestash|1.766
+ r:06 value=dinoki-ai/osaurus|1.712
+
+$ scripts/hlookup.sh live 1
+ 7|202509071255 column=t:WatchEvent, value=84
+ 7|202509071255 column=t:ReleaseEvent, value=9
+ 7|202509071255 column=t:PushEvent, value=2337
+ 7|202509071255 column=t:PullRequestReviewEvent, value=49
+ 7|202509071255 column=t:PullRequestReviewCommentEvent, value=25
+ 7|202509071255 column=t:PullRequestEvent, value=117
+ 7|202509071255 column=t:PublicEvent, value=8
+ 7|202509071255 column=t:MemberEvent, value=4
+ 7|202509071255 column=t:IssuesEvent, value=66
+ 7|202509071255 column=t:IssueCommentEvent, value=54
+ 7|202509071255 column=t:GollumEvent, value=1
+ 7|202509071255 column=t:ForkEvent, value=26

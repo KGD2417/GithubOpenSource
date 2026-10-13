@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<configuration>
+  <property><name>hbase.cluster.distributed</name><value>true</value></property>
+  <property><name>hbase.rootdir</name><value>hdfs://namenode:8020/hbase</value></property>
+  <!-- One ZooKeeper shared by HBase, Kafka and Storm -->
+  <property><name>hbase.zookeeper.quorum</name><value>zookeeper</value></property>
+  <property><name>hbase.zookeeper.property.clientPort</name><value>2181</value></property>
+  <!-- Plain FileSystem WAL: the async WAL needs Hadoop internals that differ across 3.x releases -->
+  <property><name>hbase.wal.provider</name><value>filesystem</value></property>
+  <property><name>hbase.unsafe.stream.capability.enforce</name><value>false</value></property>
+  <property><name>hbase.regionserver.handler.count</name><value>10</value></property>
+  <property><name>hfile.block.cache.size</name><value>0.2</value></property>
+  <!-- Snappy via snappy-java (pure Java, works on arm64 without native libs) -->
+  <property><name>hbase.io.compress.snappy.codec</name><value>org.apache.hadoop.hbase.io.compress.xerial.SnappyCodec</value></property>
+  <!-- Bulk-loaded HFiles are moved, not copied, into the table -->
+  <property><name>hbase.bulkload.staging.dir</name><value>/hbase-staging</value></property>
+</configuration>

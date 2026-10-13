@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<configuration>
+  <property><name>yarn.resourcemanager.hostname</name><value>resourcemanager</value></property>
+  <property><name>yarn.resourcemanager.bind-host</name><value>0.0.0.0</value></property>
+  <property><name>yarn.nodemanager.aux-services</name><value>mapreduce_shuffle</value></property>
+  <property>
+    <name>yarn.nodemanager.env-whitelist</name>
+    <value>JAVA_HOME,HADOOP_COMMON_HOME,HADOOP_HDFS_HOME,HADOOP_CONF_DIR,CLASSPATH_PREPEND_DISTCACHE,HADOOP_YARN_HOME,HADOOP_HOME,HADOOP_MAPRED_HOME,PATH,LANG,TZ</value>
+  </property>
+  <!-- Per NodeManager: 1.5 GB / 2 vcores for containers (container mem_limit is 2 GB incl. the NM JVM) -->
+  <property><name>yarn.nodemanager.resource.memory-mb</name><value>1536</value></property>
+  <property><name>yarn.nodemanager.resource.cpu-vcores</name><value>2</value></property>
+  <property><name>yarn.scheduler.minimum-allocation-mb</name><value>256</value></property>
+  <property><name>yarn.scheduler.maximum-allocation-mb</name><value>1536</value></property>
+  <property><name>yarn.scheduler.maximum-allocation-vcores</name><value>2</value></property>
+  <!-- Java 8 reserves lots of virtual memory; the vmem check kills healthy containers -->
+  <property><name>yarn.nodemanager.vmem-check-enabled</name><value>false</value></property>
+  <!-- Laptop disks are often >90% full; don't mark the NodeManager unhealthy for that -->
+  <property><name>yarn.nodemanager.disk-health-checker.max-disk-utilization-per-disk-percentage</name><value>99</value></property>
+  <property><name>yarn.log-aggregation-enable</name><value>true</value></property>
+  <property><name>yarn.nodemanager.remote-app-log-dir</name><value>/app-logs</value></property>
+  <property><name>yarn.log.server.url</name><value>http://historyserver:19888/jobhistory/logs</value></property>
+</configuration>

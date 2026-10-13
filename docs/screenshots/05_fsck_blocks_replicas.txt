@@ -1,0 +1,45 @@
+FSCK started by root (auth:SIMPLE) from /172.21.0.8 for path /gh/raw/events/dt=2025-09-01/2025-09-01-14.json.gz at Mon Oct 12 22:58:03 UTC 2026
+
+/gh/raw/events/dt=2025-09-01/2025-09-01-14.json.gz 108502889 bytes, replicated: replication=2, 2 block(s):  OK
+0. BP-1440810275-172.20.0.2-1791798506404:blk_1073741864_1040 len=67108864 Live_repl=2  [DatanodeInfoWithStorage[172.21.0.7:9866,DS-da5ce629-83e7-4d31-92c6-0c5de0284ca0,DISK], DatanodeInfoWithStorage[172.21.0.4:9866,DS-b105103b-1e66-4e89-ba99-78ba24315c91,DISK]]
+1. BP-1440810275-172.20.0.2-1791798506404:blk_1073741865_1041 len=41394025 Live_repl=2  [DatanodeInfoWithStorage[172.21.0.7:9866,DS-da5ce629-83e7-4d31-92c6-0c5de0284ca0,DISK], DatanodeInfoWithStorage[172.21.0.4:9866,DS-b105103b-1e66-4e89-ba99-78ba24315c91,DISK]]
+
+
+Status: HEALTHY
+ Number of data-nodes:	2
+ Number of racks:		1
+ Total dirs:			0
+ Total symlinks:		0
+
+Replicated Blocks:
+ Total size:	108502889 B
+ Total files:	1
+ Total blocks (validated):	2 (avg. block size 54251444 B)
+ Minimally replicated blocks:	2 (100.0 %)
+ Over-replicated blocks:	0 (0.0 %)
+ Under-replicated blocks:	0 (0.0 %)
+ Mis-replicated blocks:		0 (0.0 %)
+ Default replication factor:	2
+ Average block replication:	2.0
+ Missing blocks:		0
+ Corrupt blocks:		0
+ Missing replicas:		0 (0.0 %)
+ Blocks queued for replication:	0
+
+Erasure Coded Block Groups:
+ Total size:	0 B
+ Total files:	0
+ Total block groups (validated):	0
+ Minimally erasure-coded block groups:	0
+ Over-erasure-coded block groups:	0
+ Under-erasure-coded block groups:	0
+ Unsatisfactory placement block groups:	0
+ Average block group size:	0.0
+ Missing block groups:		0
+ Corrupt block groups:		0
+ Missing internal blocks:	0
+ Blocks queued for replication:	0
+FSCK ended at Mon Oct 12 22:58:03 UTC 2026 in 6 milliseconds
+
+
+The filesystem under path '/gh/raw/events/dt=2025-09-01/2025-09-01-14.json.gz' is HEALTHY

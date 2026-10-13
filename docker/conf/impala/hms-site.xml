@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<!-- Impala's metastore service (CDP standalone metastore from the catalogd image) over the SAME Postgres
+     metastore DB as Hive's. Impala's catalog calls Hive-4-era APIs (get_dataconnectors) that Apache
+     HMS 3.1.3 lacks, so Impala talks to this process; both read and write one set of table definitions. -->
+<configuration>
+  <property><name>javax.jdo.option.ConnectionURL</name><value>jdbc:postgresql://postgres:5432/metastore</value></property>
+  <property><name>javax.jdo.option.ConnectionDriverName</name><value>org.postgresql.Driver</value></property>
+  <property><name>javax.jdo.option.ConnectionUserName</name><value>hive</value></property>
+  <property><name>javax.jdo.option.ConnectionPassword</name><value>${env.HIVE_DB_PASSWORD}</value></property>
+  <property><name>metastore.schema.verification</name><value>false</value></property>
+  <property><name>datanucleus.schema.autoCreateAll</name><value>true</value></property>
+  <property><name>metastore.thrift.port</name><value>9084</value></property>
+  <property><name>metastore.warehouse.dir</name><value>/gh/curated/warehouse</value></property>
+  <property><name>metastore.warehouse.external.dir</name><value>/gh/curated/warehouse</value></property>
+  <!-- Keep CDP's default metadata transformer: it sets each table's accessType from the client's
+       declared capabilities, and Impala refuses tables whose accessType is unset/NONE. It only shapes
+       what THIS metastore returns to Impala; Hive's own metastore is unaffected. -->
+  <property><name>metastore.event.db.notification.api.auth</name><value>false</value></property>
+  <property><name>hive.metastore.event.db.notification.api.auth</name><value>false</value></property>
+</configuration>

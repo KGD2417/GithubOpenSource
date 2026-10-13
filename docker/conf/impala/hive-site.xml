@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<!-- Impala only needs to find the shared metastore. It must NOT get the full Hive config:
+     Impala's embedded (CDP) Hive classes reject hive.execution.engine=mr and abort on startup. -->
+<configuration>
+  <property><name>hive.metastore.uris</name><value>thrift://impala-hms:9084</value></property>
+  <property><name>hive.metastore.client.socket.timeout</name><value>3600</value></property>
+</configuration>

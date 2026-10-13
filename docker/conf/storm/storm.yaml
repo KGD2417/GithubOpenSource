@@ -1,0 +1,11 @@
+# Storm 2.8.9 on the shared ZooKeeper (PLAN.md §3.2)
+storm.zookeeper.servers: ["zookeeper"]
+storm.zookeeper.root: "/storm"
+nimbus.seeds: ["storm-nimbus"]
+storm.local.dir: "/data"
+supervisor.slots.ports: [6700, 6701]
+nimbus.childopts: "-Xmx320m"
+supervisor.childopts: "-Xmx192m"
+ui.childopts: "-Xmx192m"
+worker.childopts: "-Xmx448m"
+ui.port: 8080

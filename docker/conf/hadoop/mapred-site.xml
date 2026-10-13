@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<configuration>
+  <property><name>mapreduce.framework.name</name><value>yarn</value></property>
+  <property><name>yarn.app.mapreduce.am.env</name><value>HADOOP_MAPRED_HOME=/opt/hadoop</value></property>
+  <property><name>mapreduce.map.env</name><value>HADOOP_MAPRED_HOME=/opt/hadoop</value></property>
+  <property><name>mapreduce.reduce.env</name><value>HADOOP_MAPRED_HOME=/opt/hadoop</value></property>
+
+  <!-- Sized for 2 x 1536 MB NodeManagers -->
+  <property><name>yarn.app.mapreduce.am.resource.mb</name><value>512</value></property>
+  <property><name>yarn.app.mapreduce.am.command-opts</name><value>-Xmx384m</value></property>
+  <property><name>mapreduce.map.memory.mb</name><value>512</value></property>
+  <property><name>mapreduce.map.java.opts</name><value>-Xmx384m</value></property>
+  <property><name>mapreduce.reduce.memory.mb</name><value>768</value></property>
+  <property><name>mapreduce.reduce.java.opts</name><value>-Xmx576m</value></property>
+  <property><name>mapreduce.task.io.sort.mb</name><value>100</value></property>
+  <property><name>mapreduce.job.reduces</name><value>2</value></property>
+  <property><name>mapreduce.map.output.compress</name><value>true</value></property>
+  <property><name>mapreduce.map.output.compress.codec</name><value>org.apache.hadoop.io.compress.SnappyCodec</value></property>
+
+  <!-- HBase 2.5.16 bundles the Hadoop 3.4 client, whose job submitter puts an <ADD_OPENS> placeholder
+       (for JDK 17) in launch commands; our 3.3.6 NodeManagers don't expand it. Hadoop 3.3 ignores this. -->
+  <property><name>mapreduce.jvm.add-opens-as-default</name><value>false</value></property>
+
+  <property><name>mapreduce.jobhistory.address</name><value>historyserver:10020</value></property>
+  <property><name>mapreduce.jobhistory.webapp.address</name><value>historyserver:19888</value></property>
+  <property><name>mapreduce.jobhistory.bind-host</name><value>0.0.0.0</value></property>
+  <property><name>mapreduce.jobhistory.intermediate-done-dir</name><value>/mr-history/tmp</value></property>
+  <property><name>mapreduce.jobhistory.done-dir</name><value>/mr-history/done</value></property>
+</configuration>

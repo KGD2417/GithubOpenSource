@@ -1,0 +1,10 @@
+.env
+docker/cache/
+data/
+bench/results/*.csv
+tableau/extracts/
+**/target/
+__pycache__/
+.playwright-mcp/
+/*.java
+pig_*.log

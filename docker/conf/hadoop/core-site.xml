@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<configuration>
+  <property><name>fs.defaultFS</name><value>hdfs://namenode:8020</value></property>
+  <property><name>hadoop.tmp.dir</name><value>/data/tmp</value></property>
+  <!-- HiveServer2 / Oozie-style impersonation; everything runs as root inside the containers -->
+  <property><name>hadoop.proxyuser.root.hosts</name><value>*</value></property>
+  <property><name>hadoop.proxyuser.root.groups</name><value>*</value></property>
+  <property><name>hadoop.http.staticuser.user</name><value>root</value></property>
+</configuration>
