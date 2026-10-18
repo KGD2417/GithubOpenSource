@@ -4,6 +4,7 @@
 # Why reset: windows use event time. Leftover events from an earlier replay would be read first, push the
 # watermark forward, and a new replay of the same (or an earlier) hour would then be dropped as "late".
 set -euo pipefail
+export MSYS_NO_PATHCONV=1      # Git Bash on Windows: keep container paths (/opt/...) as-is
 cd "$(dirname "$0")/.."
 topic=${1:-gh.events}
 name=$([ "$topic" = gh.events ] && echo pulse || echo pulse-live)

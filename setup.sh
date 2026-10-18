@@ -2,13 +2,14 @@
 # One-time setup: checks the machine, creates .env, downloads verified tarballs, builds images.
 # Re-running is safe: downloads and builds are cached.  ./setup.sh --download-only skips the build.
 set -euo pipefail
+export MSYS_NO_PATHCONV=1      # Git Bash on Windows: don't rewrite container paths like /opt/... into C:/...
 cd "$(dirname "$0")"
 
 docker info >/dev/null 2>&1 || { echo "Docker is not running. Start Docker Desktop and re-run." >&2; exit 1; }
 
 arch=$(docker version --format '{{.Server.Arch}}')          # arm64 | amd64
 mem_gb=$(( $(docker info --format '{{.MemTotal}}') / 1024 / 1024 / 1024 ))
-free_gb=$(df -g . | awk 'NR==2 {print $4}')
+free_gb=$(df -Pk . | awk 'NR==2 {print int($4 / 1048576)}')   # POSIX df: macOS, Linux, Git Bash
 echo "Docker: arch=$arch memory=${mem_gb}GB · free disk here=${free_gb}GB"
 if [ "$mem_gb" -lt 10 ]; then
   echo "WARNING: Docker has ${mem_gb} GB. The full stages need ~11 GB (Docker Desktop > Settings > Resources)."

@@ -3,6 +3,7 @@
 # Starts exactly the services a stage needs and stops every other running service,
 # so the laptop never runs more than one stage's memory budget (see PLAN.md §3.2).
 set -euo pipefail
+export MSYS_NO_PATHCONV=1      # Git Bash on Windows: keep container paths (/opt/...) as-is
 cd "$(dirname "$0")/.."
 
 CORE="postgres namenode datanode1 datanode2 resourcemanager nodemanager1 nodemanager2 historyserver"

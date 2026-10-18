@@ -6,6 +6,7 @@
 #   hlookup.sh live    [n]                   last n minutes of Storm counters
 # Runs on the laptop (wraps docker compose exec) or inside the edge container.
 set -euo pipefail
+export MSYS_NO_PATHCONV=1      # Git Bash on Windows: keep container paths (/opt/...) as-is
 run() { if [ -f /.dockerenv ]; then hbase shell -n; else docker compose exec -T edge hbase shell -n; fi; }
 salt() { local s; s=$(printf '%s' "$1" | (md5sum 2>/dev/null || md5) | cut -c1-2); echo "$s"; }
 repo_id() {   # full_name -> repo_id via repo_index

@@ -3,6 +3,7 @@
 # then assertions on what came out at the far end of each path. Exit code 0 = everything passed.
 #   scripts/e2e.sh          (LITE=1 on an 8 GB machine)
 set -euo pipefail
+export MSYS_NO_PATHCONV=1      # Git Bash on Windows: keep container paths (/opt/...) as-is
 cd "$(dirname "$0")/.."
 LOG=data/logs; mkdir -p $LOG
 fail() { echo "E2E FAIL: $*" >&2; exit 1; }

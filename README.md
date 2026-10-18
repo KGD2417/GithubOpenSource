@@ -93,6 +93,20 @@ make stage STAGE=batch                      # 16 GB laptop; on an 8 GB machine p
 make download MODE=sample                   # 3 hours of 2025-09-01 into HDFS (demo = 2 days, large = 8 days)
 ```
 
+**Windows:** run everything from Git Bash with Docker Desktop (WSL 2 backend). The scripts handle Git Bash path
+conversion and `.gitattributes` keeps LF line endings. `make` is not installed by default; every target is a
+one-liner, so type the command directly:
+
+```bash
+./setup.sh
+scripts/stage.sh batch                                        # make stage STAGE=batch
+docker compose exec -T edge scripts/download_gharchive.sh --mode sample   # make download
+MSYS_NO_PATHCONV=1 docker compose exec -T edge pulse ddl      # make pulse ARGS="ddl" (any step)
+scripts/mvn.sh -q package ; scripts/topology.sh ; scripts/e2e.sh
+```
+
+`MSYS_NO_PATHCONV=1` matters only when an argument looks like an absolute path; the scripts set it themselves.
+
 The whole batch pipeline for one day runs with either:
 
 - `docker compose exec airflow airflow dags test gh_pulse_daily 2025-09-01` after `make stage STAGE=orchestrate`, or

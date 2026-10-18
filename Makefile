@@ -1,5 +1,7 @@
 # Thin wrappers; every target is a one-liner you can also type by hand.
 STAGE ?= core
+# Git Bash on Windows: keep container paths (/opt/...) as-is in docker arguments
+export MSYS_NO_PATHCONV = 1
 
 .PHONY: setup stage status down smoke download pulse topology topology-kill replay e2e bench
 
