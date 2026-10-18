@@ -233,10 +233,13 @@ services:
     profiles: ["streaming"]
     command: storm nimbus
     mem_limit: 512m
-    volumes: &storm-volumes
-      - ./docker/conf/storm/storm.yaml:/conf/storm.yaml     # rw: the image entrypoint chowns it
-      - ./java/storm-topology/target:/opt/pulse-jars:ro
-      - ./data:/opt/pulse-data:ro
+    volumes:
+      - &storm-conf ./docker/conf/storm/storm.yaml:/conf/storm.yaml     # rw: the image entrypoint chowns it
+      - &storm-jars ./java/storm-topology/target:/opt/pulse-jars:ro
+      - &storm-data ./data:/opt/pulse-data:ro
+      # storm.local.dir holds the topology blobs. ZK (zk-data) outlives the container, so the blobs must too:
+      # a nimbus recreated without them gives up leadership and every `storm jar` fails.
+      - nimbus-data:/data
     depends_on: [zookeeper]
 
   storm-supervisor:
@@ -246,7 +249,7 @@ services:
     profiles: ["streaming"]
     command: storm supervisor
     mem_limit: 1g
-    volumes: *storm-volumes
+    volumes: [*storm-conf, *storm-jars, *storm-data]
     depends_on: [storm-nimbus]
 
   storm-ui:
@@ -257,7 +260,7 @@ services:
     command: storm ui
     mem_limit: 320m
     ports: ["8081:8080"]
-    volumes: *storm-volumes
+    volumes: [*storm-conf, *storm-jars, *storm-data]
     depends_on: [storm-nimbus]
 
   airflow:                 # orchestrator: `airflow standalone` (scheduler + API server + DAG processor)
@@ -385,6 +388,7 @@ volumes:
   nn-data:
   dn1-data:
   dn2-data:
+  nimbus-data:
 
 # Network name without "_": Hive resolves peers to <container>.<network>, and Java's URI parser
 # rejects underscores in hostnames (URISyntaxException: thrift://bda-hive-metastore.bda_default:9083).
